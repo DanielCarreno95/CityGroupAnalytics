@@ -338,12 +338,28 @@ def create_filters_sidebar(df: pd.DataFrame):
             (df_filtered['MatchDate'] <= pd.Timestamp(date_range[1]))
         ]
     
-    # Logout button at the bottom of sidebar
+    # Navigation buttons at the bottom of sidebar
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### **NAVIGATION**")
+    if st.sidebar.button("**Home**", use_container_width=True, key='home_button'):
+        st.session_state['current_page'] = 'home'
+        st.query_params.clear()
+        st.rerun()
+    
     st.sidebar.markdown("---")
     st.sidebar.markdown("### **SESSION**")
+    
+    # Home button
+    if st.sidebar.button("**Home**", use_container_width=True, key='home_button'):
+        st.session_state['current_page'] = 'home'
+        st.query_params.clear()
+        st.rerun()
+    
+    # Logout button
     if st.sidebar.button("**Logout**", use_container_width=True, key='logout_button'):
         st.session_state['authenticated'] = False
         st.session_state['current_page'] = 'login'
+        st.query_params.clear()
         st.rerun()
     
     return df_filtered, top_n

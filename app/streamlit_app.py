@@ -1223,7 +1223,20 @@ def plot_high_potential_players(df: pd.DataFrame, top_n: int = 20, potential_fil
     
     if len(high_pot_players) == 0:
         st.warning(f"No players with Potential {potential_filter} found in the filtered dataset.")
-        return
+        # Return empty figure and empty dataframe to prevent unpacking error
+        empty_fig = go.Figure()
+        empty_fig.update_layout(
+            title=dict(
+                text=f"<b>HIGH POTENTIAL PLAYERS (Grade {potential_filter}) - TOP {top_n}</b>",
+                x=0.5,
+                font=dict(size=14, color=CFG_COLORS['secondary'])
+            ),
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            height=450
+        )
+        empty_df = pd.DataFrame(columns=['PlayerID', 'PlayerName', 'Country', 'Position', 'AgeBand', 'AvgPerformance', 'ReportCount', 'Potential'])
+        return empty_fig, empty_df
     
     # Create colors based on performance
     colors = [get_performance_color(val) for val in high_pot_players['AvgPerformance']]

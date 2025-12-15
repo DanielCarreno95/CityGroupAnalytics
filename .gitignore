@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Data files (keep structure, ignore large files if needed)
+# Note: Processed data is included for reproducibility
+# Uncomment if you want to ignore processed data (not recommended)
+# data/processed/*.csv
+# data/processed/*.json
+
+# Reference files (optional - can be excluded if size is concern)
+# FootballInsightsArchitect_PreTasks.pdf
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Streamlit
+.streamlit/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+

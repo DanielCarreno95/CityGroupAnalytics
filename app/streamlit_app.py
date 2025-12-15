@@ -338,14 +338,6 @@ def create_filters_sidebar(df: pd.DataFrame):
             (df_filtered['MatchDate'] <= pd.Timestamp(date_range[1]))
         ]
     
-    # Navigation buttons at the bottom of sidebar
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### **NAVIGATION**")
-    if st.sidebar.button("**Home**", use_container_width=True, key='home_button'):
-        st.session_state['current_page'] = 'home'
-        st.query_params.clear()
-        st.rerun()
-    
     st.sidebar.markdown("---")
     st.sidebar.markdown("### **SESSION**")
     

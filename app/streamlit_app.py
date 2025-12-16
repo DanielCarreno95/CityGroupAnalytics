@@ -973,12 +973,18 @@ def plot_foot_distribution(df: pd.DataFrame):
     foot_stats.columns = ['ReportFoot', 'UniquePlayers']
     foot_stats = foot_stats.sort_values('UniquePlayers', ascending=False)
     
-    colors = [CFG_COLORS['primary'], CFG_COLORS['success'], CFG_COLORS['warning']]
+    # Use same consistent color mapping as foot performance chart
+    color_map = {
+        'Both Feet': CFG_COLORS['primary'],
+        'Right Foot': CFG_COLORS['success'],
+        'Left Foot': CFG_COLORS['warning']
+    }
+    colors = [color_map.get(foot, CFG_COLORS['primary']) for foot in foot_stats['ReportFoot']]
     
     fig = go.Figure(go.Pie(
         labels=foot_stats['ReportFoot'],
         values=foot_stats['UniquePlayers'],
-        marker=dict(colors=colors[:len(foot_stats)], line=dict(color=CFG_COLORS['border'], width=1)),
+        marker=dict(colors=colors, line=dict(color=CFG_COLORS['border'], width=1)),
         hovertemplate='<b>%{label}</b><br>Players: %{value}<extra></extra>',
         textinfo='label+percent',
         textfont=dict(color=CFG_COLORS['text'])

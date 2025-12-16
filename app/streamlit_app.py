@@ -2302,8 +2302,6 @@ def dashboard_page():
             </div>
             """, unsafe_allow_html=True)
         
-        render_performance_color_legend()
-        
         st.markdown("---")
         
         # Unified table below both charts
@@ -2411,7 +2409,7 @@ def dashboard_page():
         with col1:
             st.markdown("#### **PERFORMANCE DISTRIBUTION**")
             st.caption("Distribution of performance grades")
-            render_performance_color_legend()
+            # Note: This chart uses colorscale with colorbar, no performance legend needed
             fig_dist = plot_performance_distribution(df_filtered)
             st.plotly_chart(fig_dist, use_container_width=True)
             st.markdown("""
@@ -2663,7 +2661,7 @@ def dashboard_page():
         with col_foot1:
             st.markdown("#### **AVERAGE PERFORMANCE BY PREFERRED FOOT**")
             st.caption("Performance grade by preferred foot")
-            render_performance_color_legend()
+            # Note: Pie chart has its own legend, no performance legend needed
             fig_foot_perf = plot_foot_performance(df_filtered)
             st.plotly_chart(fig_foot_perf, use_container_width=True)
         

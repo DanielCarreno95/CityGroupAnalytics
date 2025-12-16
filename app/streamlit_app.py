@@ -2160,16 +2160,16 @@ def dashboard_page():
     display_kpis(df_filtered)
     st.markdown("---")
     
-    # Determine which tab to show based on navigation
+    # Determine which tab to show based on navigation - use session_state directly
     query_params = st.query_params
-    selected_tab_id = None
     
-    if 'selected_tab' in st.session_state:
-        selected_tab_id = st.session_state['selected_tab']
-        # Keep it in session state for this render
-    elif 'tab' in query_params:
-        selected_tab_id = query_params['tab']
-        st.session_state['selected_tab'] = selected_tab_id
+    # Initialize or update selected_tab from query params or session_state
+    if 'tab' in query_params:
+        st.session_state['selected_tab'] = query_params['tab']
+    elif 'selected_tab' not in st.session_state:
+        st.session_state['selected_tab'] = 'player_analysis'  # Default
+    
+    selected_tab_id = st.session_state['selected_tab']
     
     # Create 4 main tabs with a top-right Home button for quick navigation
     tab_cols = st.columns([5, 1])
@@ -2179,6 +2179,7 @@ def dashboard_page():
             st.query_params.clear()
             st.rerun()
     
+    # Create tabs - but we'll control content via session_state
     tab1, tab2, tab3, tab4 = st.tabs([
         "Player Analysis",
         "Performance & Distribution",
@@ -2186,58 +2187,94 @@ def dashboard_page():
         "Position & Scouts"
     ])
     
-    # Use JavaScript to select the correct tab based on navigation
-    if selected_tab_id:
-        tab_mapping = {
-            'player_analysis': 0,
-            'performance_distribution': 1,
-            'geographic_teams': 2,
-            'position_scouts': 3
-        }
-        tab_index = tab_mapping.get(selected_tab_id, 0)
-        tab_labels = ["Player Analysis", "Performance & Distribution", "Geographic & Teams", "Position & Scouts"]
-        target_label = tab_labels[tab_index] if tab_index < len(tab_labels) else ""
-        
-        # JavaScript with MutationObserver + retries to reliably click the correct tab
-        st.markdown(f"""
-        <script>
-            (function() {{
-                const targetIndex = {tab_index};
-                const targetLabel = "{target_label}";
+    # Map tab IDs to actual tab objects
+    tab_mapping = {
+        'player_analysis': tab1,
+        'performance_distribution': tab2,
+        'geographic_teams': tab3,
+        'position_scouts': tab4
+    }
+    
+    # JavaScript to visually select the correct tab - more aggressive approach
+    tab_index_mapping = {
+        'player_analysis': 0,
+        'performance_distribution': 1,
+        'geographic_teams': 2,
+        'position_scouts': 3
+    }
+    target_index = tab_index_mapping.get(selected_tab_id, 0)
+    tab_labels = ["Player Analysis", "Performance & Distribution", "Geographic & Teams", "Position & Scouts"]
+    target_label = tab_labels[target_index]
+    
+    # JavaScript to visually select the correct tab - very aggressive with multiple strategies
+    st.markdown(f"""
+    <script>
+        (function() {{
+            const targetIndex = {target_index};
+            const targetLabel = "{target_label}";
+            let clicked = false;
+            
+            function forceClickTab() {{
+                if (clicked) return true;
                 
-                function trySelect() {{
-                    const tabs = Array.from(document.querySelectorAll('button[role="tab"], [data-baseweb="tab"]'));
-                    if (tabs.length > targetIndex) {{
-                        // Prefer label match; fallback to index
-                        const byLabel = tabs.find(t => t.innerText.trim() === targetLabel);
-                        const tab = byLabel || tabs[targetIndex];
-                        if (tab) {{
+                // Strategy 1: Find by index
+                const allTabs = Array.from(document.querySelectorAll('button[role="tab"], [data-baseweb="tab"], .stTabs button'));
+                if (allTabs.length > targetIndex) {{
+                    const tab = allTabs[targetIndex];
+                    if (tab && tab.getAttribute('aria-selected') !== 'true') {{
+                        tab.scrollIntoView({{ behavior: 'smooth', block: 'center' }});
+                        setTimeout(() => {{
                             tab.click();
+                            clicked = true;
+                        }}, 100);
+                        return true;
+                    }}
+                }}
+                
+                // Strategy 2: Find by label text
+                for (let tab of allTabs) {{
+                    const text = (tab.innerText || tab.textContent || '').trim();
+                    if (text.includes(targetLabel.split(' ')[0]) || text.includes(targetLabel.split('&')[0].trim())) {{
+                        if (tab.getAttribute('aria-selected') !== 'true') {{
+                            tab.scrollIntoView({{ behavior: 'smooth', block: 'center' }});
+                            setTimeout(() => {{
+                                tab.click();
+                                clicked = true;
+                            }}, 100);
                             return true;
                         }}
                     }}
-                    return false;
                 }}
                 
-                // Immediate attempt
-                if (!trySelect()) {{
-                    // Observe DOM for tabs to appear
-                    const observer = new MutationObserver(() => {{
-                        if (trySelect()) {{
-                            observer.disconnect();
-                        }}
-                    }});
-                    observer.observe(document.body, {{ childList: true, subtree: true }});
-                    // Safety timeout after 3s
-                    setTimeout(() => observer.disconnect(), 3000);
+                return false;
+            }}
+            
+            // Multiple attempts with different timings
+            forceClickTab();
+            setTimeout(forceClickTab, 200);
+            setTimeout(forceClickTab, 500);
+            setTimeout(forceClickTab, 1000);
+            
+            // Observer for DOM changes
+            const observer = new MutationObserver(() => {{
+                if (!clicked) {{
+                    forceClickTab();
                 }}
-            }})();
-        </script>
-        """, unsafe_allow_html=True)
-        
-        # Clear selected_tab after using it
-        if 'selected_tab' in st.session_state:
-            del st.session_state['selected_tab']
+            }});
+            observer.observe(document.body, {{ childList: true, subtree: true }});
+            setTimeout(() => observer.disconnect(), 4000);
+            
+            // Interval as final fallback
+            let attempts = 0;
+            const interval = setInterval(() => {{
+                attempts++;
+                if (forceClickTab() || attempts > 40) {{
+                    clearInterval(interval);
+                }}
+            }}, 100);
+        }})();
+    </script>
+    """, unsafe_allow_html=True)
     
     # ===========================================
     # TAB 1: PLAYER ANALYSIS

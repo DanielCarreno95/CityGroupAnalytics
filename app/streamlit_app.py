@@ -282,7 +282,7 @@ def create_filters_sidebar(df: pd.DataFrame):
     st.sidebar.markdown("### **ANALYSIS FILTERS**")
     
     # Top N filter
-    top_n = st.sidebar.number_input("**Top N Results**", min_value=5, max_value=100, value=20, step=5, key='top_n_filter')
+    top_n = st.sidebar.number_input("**Top N Results**", min_value=5, max_value=100, value=10, step=5, key='top_n_filter')
     
     # Position filter
     positions = ['All'] + sorted(df['ReportPrimaryPosition'].dropna().unique().tolist())
@@ -2192,17 +2192,20 @@ def dashboard_page():
         font-size: 1rem !important;
         font-weight: 700 !important;
         padding: 0.75rem 1rem !important;
-        border: 1px solid {CFG_COLORS['primary']} !important;
-        border-bottom: 2px solid {CFG_COLORS['primary']} !important;
+        border: 2px solid {CFG_COLORS['primary']} !important;
+        border-bottom: 3px solid {CFG_COLORS['primary']} !important;
         border-radius: 8px 8px 0 0 !important;
-        background: rgba(92, 171, 232, 0.15) !important;
-        color: {CFG_COLORS['primary']} !important;
+        background: {CFG_COLORS['primary']} !important;
+        color: white !important;
         transition: all 0.2s !important;
         height: 48px !important;
         vertical-align: middle !important;
+        opacity: 0.8 !important;
     }}
     button[key*="tab_btn_"]:hover {{
-        background: rgba(92, 171, 232, 0.25) !important;
+        background: {CFG_COLORS['secondary']} !important;
+        opacity: 1 !important;
+        border-color: {CFG_COLORS['secondary']} !important;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -2437,10 +2440,16 @@ def dashboard_page():
             st.markdown("#### **POTENTIAL BY AGE BAND**")
             st.caption("% players with selected potential")
             render_performance_color_legend()
+            # Use default 'A' for initial render
+            fig_age_pot = plot_age_band_potential(df_filtered, 'A')
+            st.plotly_chart(fig_age_pot, use_container_width=True)
+            # Filter below chart, before conclusion
             pot_grades_chart = ['A', 'B', 'C', 'D', 'E', 'F']
             selected_pot_chart = st.selectbox("**Potential Grade**", pot_grades_chart, key='pot_filter_chart', index=0)
-            fig_age_pot = plot_age_band_potential(df_filtered, selected_pot_chart)
-            st.plotly_chart(fig_age_pot, use_container_width=True)
+            # Re-render if changed
+            if selected_pot_chart != 'A':
+                fig_age_pot = plot_age_band_potential(df_filtered, selected_pot_chart)
+                st.plotly_chart(fig_age_pot, use_container_width=True)
             st.markdown(f"""
             <div style='font-size: 0.85rem; color: #6B7280; padding: 0.5rem; background-color: #F3F4F6; border-radius: 5px; margin-top: 0.5rem;'>
             <strong>Strategic Insight:</strong> Potential Grade {selected_pot_chart} concentration by age band identifies the optimal development 
@@ -2530,10 +2539,16 @@ def dashboard_page():
             st.markdown("### **% PLAYERS WITH POTENTIAL BY COUNTRY**")
             st.caption("% players with selected potential grade by country")
             render_performance_color_legend()
+            # Use default 'A' for initial render
+            fig_country_pot = plot_country_potential(df_filtered, top_n_geo, 'A')
+            st.plotly_chart(fig_country_pot, use_container_width=True)
+            # Filter below chart, before conclusion
             pot_grades_geo = ['A', 'B', 'C', 'D', 'E', 'F']
             selected_pot_geo = st.selectbox("**Potential Grade**", pot_grades_geo, key='pot_filter_geo', index=0)
-            fig_country_pot = plot_country_potential(df_filtered, top_n_geo, selected_pot_geo)
-            st.plotly_chart(fig_country_pot, use_container_width=True)
+            # Re-render if changed
+            if selected_pot_geo != 'A':
+                fig_country_pot = plot_country_potential(df_filtered, top_n_geo, selected_pot_geo)
+                st.plotly_chart(fig_country_pot, use_container_width=True)
             st.markdown(f"""
             <div style='font-size: 0.85rem; color: #6B7280; padding: 0.5rem; background-color: #F3F4F6; border-radius: 5px; margin-top: 0.5rem;'>
             <strong>Strategic Insight:</strong> Potential Grade {selected_pot_geo} concentration by country reveals markets with exceptional 
@@ -2758,24 +2773,30 @@ def main():
     if 'current_page' not in st.session_state:
         st.session_state['current_page'] = 'login'
     
-    # Handle query parameters for tab navigation
+    # Route to appropriate page
+    if not st.session_state['authenticated']:
+        login_page()
+        return
+    
+    # After login, always go to home first (unless explicitly navigating to dashboard)
+    if st.session_state['current_page'] == 'home':
+        homepage()
+        return
+    
+    # Handle query parameters for tab navigation (only if already on dashboard)
     query_params = st.query_params
     if 'page' in query_params and query_params['page'] == 'dashboard':
         st.session_state['current_page'] = 'dashboard'
         if 'tab' in query_params:
             st.session_state['selected_tab'] = query_params['tab']
     
-    # Route to appropriate page
-    if not st.session_state['authenticated']:
-        login_page()
-        return
-    
-    if st.session_state['current_page'] == 'home':
+    # Dashboard page (only if explicitly set to dashboard)
+    if st.session_state['current_page'] == 'dashboard':
+        dashboard_page()
+    else:
+        # Default: go to home if not explicitly set
+        st.session_state['current_page'] = 'home'
         homepage()
-        return
-    
-    # Dashboard page (default after login)
-    dashboard_page()
 
 
 if __name__ == "__main__":

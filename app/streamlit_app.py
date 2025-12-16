@@ -2195,44 +2195,41 @@ def dashboard_page():
             'position_scouts': 3
         }
         tab_index = tab_mapping.get(selected_tab_id, 0)
+        tab_labels = ["Player Analysis", "Performance & Distribution", "Geographic & Teams", "Position & Scouts"]
+        target_label = tab_labels[tab_index] if tab_index < len(tab_labels) else ""
         
-        # JavaScript to select the tab - more robust approach
+        # JavaScript with MutationObserver + retries to reliably click the correct tab
         st.markdown(f"""
         <script>
             (function() {{
-                function selectTab() {{
-                    // Try multiple selectors for Streamlit tabs
-                    var selectors = [
-                        'button[data-baseweb="tab"]',
-                        '[role="tab"]',
-                        '.stTabs [data-baseweb="tab"]',
-                        'button[aria-selected="false"]'
-                    ];
-                    
-                    var tabs = null;
-                    for (var i = 0; i < selectors.length; i++) {{
-                        tabs = document.querySelectorAll(selectors[i]);
-                        if (tabs.length > {tab_index}) {{
-                            break;
+                const targetIndex = {tab_index};
+                const targetLabel = "{target_label}";
+                
+                function trySelect() {{
+                    const tabs = Array.from(document.querySelectorAll('button[role="tab"], [data-baseweb="tab"]'));
+                    if (tabs.length > targetIndex) {{
+                        // Prefer label match; fallback to index
+                        const byLabel = tabs.find(t => t.innerText.trim() === targetLabel);
+                        const tab = byLabel || tabs[targetIndex];
+                        if (tab) {{
+                            tab.click();
+                            return true;
                         }}
-                    }}
-                    
-                    if (tabs && tabs.length > {tab_index}) {{
-                        tabs[{tab_index}].click();
-                        return true;
                     }}
                     return false;
                 }}
                 
-                // Try immediately
-                if (!selectTab()) {{
-                    // If not ready, wait and retry
-                    var attempts = 0;
-                    var interval = setInterval(function() {{
-                        if (selectTab() || attempts++ > 20) {{
-                            clearInterval(interval);
+                // Immediate attempt
+                if (!trySelect()) {{
+                    // Observe DOM for tabs to appear
+                    const observer = new MutationObserver(() => {{
+                        if (trySelect()) {{
+                            observer.disconnect();
                         }}
-                    }}, 100);
+                    }});
+                    observer.observe(document.body, {{ childList: true, subtree: true }});
+                    // Safety timeout after 3s
+                    setTimeout(() => observer.disconnect(), 3000);
                 }}
             }})();
         </script>

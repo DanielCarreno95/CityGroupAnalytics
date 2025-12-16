@@ -456,7 +456,7 @@ def plot_top_players_ranking(df: pd.DataFrame, top_n: int = 20):
         paper_bgcolor='white',
         font=dict(color=CFG_COLORS['text'], size=12),
         height=450,
-        margin=dict(l=180, r=30, t=60, b=40)
+        margin=dict(l=180, r=30, t=80, b=40)
     )
     
     return fig, player_stats
@@ -1293,7 +1293,7 @@ def plot_high_potential_players(df: pd.DataFrame, top_n: int = 20, potential_fil
         paper_bgcolor='white',
         font=dict(color=CFG_COLORS['text'], size=12),
         height=450,
-        margin=dict(l=180, r=30, t=60, b=40)
+        margin=dict(l=180, r=30, t=80, b=40)
     )
     
     return fig, high_pot_players
@@ -1918,7 +1918,7 @@ def plot_trend_analysis(df: pd.DataFrame):
         paper_bgcolor='white',
         font=dict(color=CFG_COLORS['text'], size=12),
         height=450,
-        margin=dict(l=50, r=30, t=60, b=60),
+        margin=dict(l=50, r=30, t=80, b=60),
         showlegend=False
     )
     
@@ -1946,7 +1946,7 @@ def plot_trend_analysis(df: pd.DataFrame):
         paper_bgcolor='white',
         font=dict(color=CFG_COLORS['text'], size=12),
         height=450,
-        margin=dict(l=50, r=30, t=60, b=60),
+        margin=dict(l=50, r=30, t=80, b=60),
         showlegend=False
     )
     

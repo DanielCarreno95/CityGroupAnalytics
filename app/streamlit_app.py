@@ -235,6 +235,17 @@ def get_performance_color(value: float, min_val: float = 1.0, max_val: float = 5
         else:
             return CFG_COLORS['primary']
 
+def render_performance_color_legend():
+    """Render legend explaining performance color coding for bar charts."""
+    st.markdown(f"""
+    <div style='display: flex; gap: 0.75rem; align-items: center; font-size: 0.85rem; color: {CFG_COLORS['text_secondary']};'>
+        <div style='display:flex; align-items:center; gap:0.25rem;'><span style='width:14px;height:14px;background:{CFG_COLORS['danger']};display:inline-block;border:1px solid {CFG_COLORS['border']}'></span> Low</div>
+        <div style='display:flex; align-items:center; gap:0.25rem;'><span style='width:14px;height:14px;background:{CFG_COLORS['warning']};display:inline-block;border:1px solid {CFG_COLORS['border']}'></span> Medium</div>
+        <div style='display:flex; align-items:center; gap:0.25rem;'><span style='width:14px;height:14px;background:{CFG_COLORS['success']};display:inline-block;border:1px solid {CFG_COLORS['border']}'></span> High</div>
+        <div style='display:flex; align-items:center; gap:0.25rem;'><span style='width:14px;height:14px;background:{CFG_COLORS['primary']};display:inline-block;border:1px solid {CFG_COLORS['border']}'></span> Elite</div>
+    </div>
+    """, unsafe_allow_html=True)
+
 
 def download_excel(df: pd.DataFrame, filename: str = "scouting_data.xlsx"):
     """Convert DataFrame to Excel and return download button."""
@@ -249,12 +260,32 @@ def download_excel(df: pd.DataFrame, filename: str = "scouting_data.xlsx"):
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
+def navigate_to_tab(tab_id: str):
+    """Navigate reliably to a dashboard tab using session state and query params."""
+    st.session_state['current_page'] = 'dashboard'
+    st.session_state['selected_tab'] = tab_id
+    st.query_params.update(page='dashboard', tab=tab_id)
+    st.experimental_set_query_params(page='dashboard', tab=tab_id)
+    st.rerun()
+
 
 # ===========================================
 def create_filters_sidebar(df: pd.DataFrame):
-    """Create professional filters in sidebar with logout button."""
-    st.sidebar.markdown("### **ANALYSIS FILTERS**")
+    """Create professional filters in sidebar with session controls first."""
+    # Session controls first
+    st.sidebar.markdown("### **SESSION**")
+    if st.sidebar.button("**Home**", use_container_width=True, key='home_button'):
+        st.session_state['current_page'] = 'home'
+        st.query_params.clear()
+        st.rerun()
+    if st.sidebar.button("**Logout**", use_container_width=True, key='logout_button'):
+        st.session_state['authenticated'] = False
+        st.session_state['current_page'] = 'login'
+        st.query_params.clear()
+        st.rerun()
+    
     st.sidebar.markdown("---")
+    st.sidebar.markdown("### **ANALYSIS FILTERS**")
     
     # Top N filter
     top_n = st.sidebar.number_input("**Top N Results**", min_value=5, max_value=100, value=20, step=5, key='top_n_filter')
@@ -337,22 +368,6 @@ def create_filters_sidebar(df: pd.DataFrame):
             (df_filtered['MatchDate'] >= pd.Timestamp(date_range[0])) &
             (df_filtered['MatchDate'] <= pd.Timestamp(date_range[1]))
         ]
-    
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### **SESSION**")
-    
-    # Home button
-    if st.sidebar.button("**Home**", use_container_width=True, key='home_button'):
-        st.session_state['current_page'] = 'home'
-        st.query_params.clear()
-        st.rerun()
-    
-    # Logout button
-    if st.sidebar.button("**Logout**", use_container_width=True, key='logout_button'):
-        st.session_state['authenticated'] = False
-        st.session_state['current_page'] = 'login'
-        st.query_params.clear()
-        st.rerun()
     
     return df_filtered, top_n
 
@@ -905,7 +920,7 @@ def plot_age_band_coverage(df: pd.DataFrame):
 
 
 def plot_foot_performance(df: pd.DataFrame):
-    """Plot average performance by preferred foot - single chart."""
+    """Plot average performance by preferred foot as a pie chart."""
     foot_stats = df.groupby('ReportFoot').agg({
         'PerformanceGrade': 'mean'
     }).reset_index()
@@ -913,38 +928,31 @@ def plot_foot_performance(df: pd.DataFrame):
     foot_stats.columns = ['ReportFoot', 'AvgPerformance']
     foot_stats = foot_stats.sort_values('AvgPerformance', ascending=False)
     
-    fig = go.Figure()
+    colors = [CFG_COLORS['primary'], CFG_COLORS['success'], CFG_COLORS['warning']]
     
-    fig.add_trace(go.Bar(
-        x=foot_stats['ReportFoot'],
-        y=foot_stats['AvgPerformance'],
-        marker_color=CFG_COLORS['primary'],
-        text=[f"{val:.2f}" for val in foot_stats['AvgPerformance']],
-        textposition='outside',
-        textfont=dict(size=12, color=CFG_COLORS['text'], weight='bold'),
-        hovertemplate='<b>%{x}</b><br>Performance: %{y:.2f}<extra></extra>'
+    fig = go.Figure(go.Pie(
+        labels=foot_stats['ReportFoot'],
+        values=foot_stats['AvgPerformance'],
+        marker=dict(colors=colors[:len(foot_stats)], line=dict(color=CFG_COLORS['border'], width=1)),
+        hovertemplate='<b>%{label}</b><br>Avg Performance: %{value:.2f}<extra></extra>',
+        textinfo='label+percent',
+        textfont=dict(color=CFG_COLORS['text'])
     ))
     
     fig.update_layout(
         title=dict(text="<b>AVERAGE PERFORMANCE BY PREFERRED FOOT</b>", x=0.5, font=dict(size=14, color=CFG_COLORS['secondary'])),
-        xaxis=dict(title=dict(text="Preferred Foot", font=dict(color=CFG_COLORS['text'], size=11)), 
-                  tickfont=dict(color=CFG_COLORS['text'], size=11)),
-        yaxis=dict(title=dict(text="Performance Grade", font=dict(color=CFG_COLORS['text'], size=11)), 
-                  gridcolor=CFG_COLORS['grid'], tickfont=dict(color=CFG_COLORS['text'], size=11),
-                  showgrid=True, zeroline=True, zerolinecolor=CFG_COLORS['border']),
         plot_bgcolor='white',
         paper_bgcolor='white',
         font=dict(color=CFG_COLORS['text'], size=12),
         height=450,
-        margin=dict(l=50, r=30, t=60, b=40),
-        showlegend=False
+        showlegend=True
     )
     
     return fig
 
 
 def plot_foot_distribution(df: pd.DataFrame):
-    """Plot player distribution by preferred foot - single chart."""
+    """Plot player distribution by preferred foot as a pie chart."""
     foot_stats = df.groupby('ReportFoot').agg({
         'PlayerID': 'nunique'
     }).reset_index()
@@ -952,31 +960,24 @@ def plot_foot_distribution(df: pd.DataFrame):
     foot_stats.columns = ['ReportFoot', 'UniquePlayers']
     foot_stats = foot_stats.sort_values('UniquePlayers', ascending=False)
     
-    fig = go.Figure()
+    colors = [CFG_COLORS['primary'], CFG_COLORS['success'], CFG_COLORS['warning']]
     
-    fig.add_trace(go.Bar(
-        x=foot_stats['ReportFoot'],
-        y=foot_stats['UniquePlayers'],
-        marker_color=CFG_COLORS['success'],
-        text=foot_stats['UniquePlayers'],
-        textposition='outside',
-        textfont=dict(size=12, color=CFG_COLORS['text'], weight='bold'),
-        hovertemplate='<b>%{x}</b><br>Unique Players: %{y}<extra></extra>'
+    fig = go.Figure(go.Pie(
+        labels=foot_stats['ReportFoot'],
+        values=foot_stats['UniquePlayers'],
+        marker=dict(colors=colors[:len(foot_stats)], line=dict(color=CFG_COLORS['border'], width=1)),
+        hovertemplate='<b>%{label}</b><br>Players: %{value}<extra></extra>',
+        textinfo='label+percent',
+        textfont=dict(color=CFG_COLORS['text'])
     ))
     
     fig.update_layout(
         title=dict(text="<b>PLAYER DISTRIBUTION BY FOOT</b>", x=0.5, font=dict(size=14, color=CFG_COLORS['secondary'])),
-        xaxis=dict(title=dict(text="Preferred Foot", font=dict(color=CFG_COLORS['text'], size=11)), 
-                  tickfont=dict(color=CFG_COLORS['text'], size=11)),
-        yaxis=dict(title=dict(text="Unique Players", font=dict(color=CFG_COLORS['text'], size=11)), 
-                  gridcolor=CFG_COLORS['grid'], tickfont=dict(color=CFG_COLORS['text'], size=11),
-                  showgrid=True, zeroline=True, zerolinecolor=CFG_COLORS['border']),
         plot_bgcolor='white',
         paper_bgcolor='white',
         font=dict(color=CFG_COLORS['text'], size=12),
         height=450,
-        margin=dict(l=50, r=30, t=60, b=40),
-        showlegend=False
+        showlegend=True
     )
     
     return fig
@@ -2113,11 +2114,7 @@ def homepage():
             
             # Navigation button
             if st.button(f"**Access {tab_info['name']}**", key=f"nav_{tab_info['tab_id']}", use_container_width=True):
-                st.session_state['current_page'] = 'dashboard'
-                st.session_state['selected_tab'] = tab_info['tab_id']
-                # Use query params to navigate
-                st.query_params.update(page='dashboard', tab=tab_info['tab_id'])
-                st.rerun()
+                navigate_to_tab(tab_info['tab_id'])
 
 
 # ===========================================
@@ -2125,6 +2122,32 @@ def homepage():
 # ===========================================
 def dashboard_page():
     """Display main dashboard with tabs."""
+    # UI theming for sidebar and tabs
+    st.markdown(f"""
+    <style>
+    /* Sidebar styling */
+    [data-testid="stSidebar"] > div:first-child {{
+        background: rgba(92, 171, 232, 0.12);
+        border-right: 2px solid {CFG_COLORS['secondary']};
+        padding: 1rem;
+    }}
+    /* Tabs styling */
+    .stTabs [data-baseweb="tab"] {{
+        font-size: 1rem;
+        font-weight: 700;
+        padding: 0.75rem 1rem;
+        border: 1px solid {CFG_COLORS['secondary']} !important;
+        border-bottom: 2px solid {CFG_COLORS['secondary']} !important;
+        background: #F5FAFF;
+        color: {CFG_COLORS['text_secondary']};
+    }}
+    .stTabs [aria-selected="true"] {{
+        background: white !important;
+        color: {CFG_COLORS['primary']} !important;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+    
     display_header()
     
     # Load data
@@ -2149,7 +2172,15 @@ def dashboard_page():
         selected_tab_id = query_params['tab']
         st.session_state['selected_tab'] = selected_tab_id
     
-    # Create 4 main tabs with comprehensive layouts
+    # Create 4 main tabs with a top-right Home button for quick navigation
+    tab_cols = st.columns([5, 1])
+    with tab_cols[1]:
+        if st.button("Home", key="home_tab_button"):
+            st.session_state['current_page'] = 'home'
+            st.query_params.clear()
+            st.experimental_set_query_params()
+            st.rerun()
+    
     tab1, tab2, tab3, tab4 = st.tabs([
         "Player Analysis",
         "Performance & Distribution",
@@ -2263,6 +2294,8 @@ def dashboard_page():
             immediate acquisition and integration into CFG academy system for controlled development pathway.
             </div>
             """, unsafe_allow_html=True)
+        
+        render_performance_color_legend()
         
         st.markdown("---")
         
@@ -2477,6 +2510,7 @@ def dashboard_page():
             st.caption("Comparative analysis of performance by country")
             fig_country_perf = plot_country_performance(df_filtered, top_n_geo)
             st.plotly_chart(fig_country_perf, use_container_width=True)
+            render_performance_color_legend()
             st.markdown("""
             <div style='font-size: 0.85rem; color: #6B7280; padding: 0.5rem; background-color: #F3F4F6; border-radius: 5px; margin-top: 0.5rem;'>
             <strong>Strategic Insight:</strong> Geographic performance analysis identifies the world's premium talent markets where our scouting 
@@ -2526,6 +2560,7 @@ def dashboard_page():
             st.markdown("### **TEAM PERFORMANCE ANALYSIS**")
             st.caption("Average performance by current team")
             plot_team_performance_simple(df_filtered, top_n_geo)
+            render_performance_color_legend()
         
         with col_team2:
             st.markdown("### **POTENTIAL DISTRIBUTION BY TEAM**")

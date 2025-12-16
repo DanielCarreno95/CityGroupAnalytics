@@ -2264,6 +2264,7 @@ def dashboard_page():
         with col_chart1:
             st.markdown("#### **TOP PLAYERS RANKING**")
             st.caption("Best average performance in the scouting pool")
+            render_performance_color_legend()
             fig_top, player_stats = plot_top_players_ranking(df_filtered, top_n_chart)
             st.plotly_chart(fig_top, use_container_width=True)
             st.markdown("""
@@ -2280,6 +2281,7 @@ def dashboard_page():
         with col_chart2:
             st.markdown("#### **HIGH POTENTIAL PLAYERS**")
             st.caption(f"Players with potential grade {pot_filter}")
+            render_performance_color_legend()
             fig_pot, high_pot_stats = plot_high_potential_players(df_filtered, top_n_chart, pot_filter)
             st.plotly_chart(fig_pot, use_container_width=True)
             st.markdown(f"""
@@ -2619,12 +2621,14 @@ def dashboard_page():
         with col_pos1:
             st.markdown("#### **AVERAGE PERFORMANCE BY POSITION**")
             st.caption("Performance grade by tactical position")
+            render_performance_color_legend()
             fig_pos_perf = plot_position_performance(df_filtered)
             st.plotly_chart(fig_pos_perf, use_container_width=True)
         
         with col_pos2:
             st.markdown("#### **SCOUTING COVERAGE BY POSITION**")
             st.caption("Number of unique players scouted by position")
+            render_performance_color_legend()
             fig_pos_cov = plot_position_coverage(df_filtered)
             st.plotly_chart(fig_pos_cov, use_container_width=True)
         
@@ -2653,12 +2657,14 @@ def dashboard_page():
         with col_foot1:
             st.markdown("#### **AVERAGE PERFORMANCE BY PREFERRED FOOT**")
             st.caption("Performance grade by preferred foot")
+            render_performance_color_legend()
             fig_foot_perf = plot_foot_performance(df_filtered)
             st.plotly_chart(fig_foot_perf, use_container_width=True)
         
         with col_foot2:
             st.markdown("#### **PLAYER DISTRIBUTION BY FOOT**")
             st.caption("Number of unique players by preferred foot")
+            render_performance_color_legend()
             fig_foot_dist = plot_foot_distribution(df_filtered)
             st.plotly_chart(fig_foot_dist, use_container_width=True)
         
@@ -2684,6 +2690,7 @@ def dashboard_page():
         # Row 3: Scout Analysis (full width)
         st.markdown("### **SCOUT PERFORMANCE ANALYSIS**")
         st.caption("Identify which scouts find the best talent")
+        render_performance_color_legend()
         plot_scout_analysis(df_filtered)
         
         st.markdown("---")

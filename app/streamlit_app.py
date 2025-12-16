@@ -934,8 +934,14 @@ def plot_foot_performance(df: pd.DataFrame):
     foot_stats.columns = ['ReportFoot', 'AvgPerformance']
     foot_stats = foot_stats.sort_values('AvgPerformance', ascending=False)
     
-    # Use consistent performance color mapping
-    colors = [get_performance_color(val) for val in foot_stats['AvgPerformance']]
+    # Use same fixed colors as foot distribution chart for consistency
+    # Map to CFG colors: primary (blue), success (teal), warning (orange)
+    color_map = {
+        'Both Feet': CFG_COLORS['primary'],
+        'Right Foot': CFG_COLORS['success'],
+        'Left Foot': CFG_COLORS['warning']
+    }
+    colors = [color_map.get(foot, CFG_COLORS['primary']) for foot in foot_stats['ReportFoot']]
     
     fig = go.Figure(go.Pie(
         labels=foot_stats['ReportFoot'],
@@ -2545,16 +2551,12 @@ def dashboard_page():
             st.markdown("### **% PLAYERS WITH POTENTIAL BY COUNTRY**")
             st.caption("% players with selected potential grade by country")
             render_performance_color_legend()
-            # Use default 'A' for initial render
-            fig_country_pot = plot_country_potential(df_filtered, top_n_geo, 'A')
-            st.plotly_chart(fig_country_pot, use_container_width=True)
             # Filter below chart, before conclusion
             pot_grades_geo = ['A', 'B', 'C', 'D', 'E', 'F']
             selected_pot_geo = st.selectbox("**Potential Grade**", pot_grades_geo, key='pot_filter_geo', index=0)
-            # Re-render if changed
-            if selected_pot_geo != 'A':
-                fig_country_pot = plot_country_potential(df_filtered, top_n_geo, selected_pot_geo)
-                st.plotly_chart(fig_country_pot, use_container_width=True)
+            # Render chart once with selected filter
+            fig_country_pot = plot_country_potential(df_filtered, top_n_geo, selected_pot_geo)
+            st.plotly_chart(fig_country_pot, use_container_width=True)
             st.markdown(f"""
             <div style='font-size: 0.85rem; color: #6B7280; padding: 0.5rem; background-color: #F3F4F6; border-radius: 5px; margin-top: 0.5rem;'>
             <strong>Strategic Insight:</strong> Potential Grade {selected_pot_geo} concentration by country reveals markets with exceptional 

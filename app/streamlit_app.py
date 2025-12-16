@@ -669,16 +669,8 @@ def plot_position_performance(df: pd.DataFrame):
     position_stats.columns = ['Position', 'AvgPerformance']
     position_stats = position_stats.sort_values('AvgPerformance', ascending=False)
     
-    # Color based on value (high/medium/low)
-    avg_perf = position_stats['AvgPerformance'].mean()
-    colors = []
-    for val in position_stats['AvgPerformance']:
-        if val >= avg_perf * 1.05:
-            colors.append(CFG_COLORS['success'])  # High - teal
-        elif val >= avg_perf * 0.95:
-            colors.append(CFG_COLORS['primary'])   # Medium - blue
-        else:
-            colors.append(CFG_COLORS['warning'])   # Low - gold
+    # Use consistent performance color mapping
+    colors = [get_performance_color(val) for val in position_stats['AvgPerformance']]
     
     fig = go.Figure()
     
@@ -2628,7 +2620,7 @@ def dashboard_page():
         with col_pos2:
             st.markdown("#### **SCOUTING COVERAGE BY POSITION**")
             st.caption("Number of unique players scouted by position")
-            render_performance_color_legend()
+            # Note: This chart shows coverage count, not performance, so legend not applicable
             fig_pos_cov = plot_position_coverage(df_filtered)
             st.plotly_chart(fig_pos_cov, use_container_width=True)
         
@@ -2664,7 +2656,7 @@ def dashboard_page():
         with col_foot2:
             st.markdown("#### **PLAYER DISTRIBUTION BY FOOT**")
             st.caption("Number of unique players by preferred foot")
-            render_performance_color_legend()
+            # Note: This chart shows distribution count, not performance, so legend not applicable
             fig_foot_dist = plot_foot_distribution(df_filtered)
             st.plotly_chart(fig_foot_dist, use_container_width=True)
         

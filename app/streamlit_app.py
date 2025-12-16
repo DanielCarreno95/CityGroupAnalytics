@@ -921,12 +921,13 @@ def plot_foot_performance(df: pd.DataFrame):
     foot_stats.columns = ['ReportFoot', 'AvgPerformance']
     foot_stats = foot_stats.sort_values('AvgPerformance', ascending=False)
     
-    colors = [CFG_COLORS['primary'], CFG_COLORS['success'], CFG_COLORS['warning']]
+    # Use consistent performance color mapping
+    colors = [get_performance_color(val) for val in foot_stats['AvgPerformance']]
     
     fig = go.Figure(go.Pie(
         labels=foot_stats['ReportFoot'],
         values=foot_stats['AvgPerformance'],
-        marker=dict(colors=colors[:len(foot_stats)], line=dict(color=CFG_COLORS['border'], width=1)),
+        marker=dict(colors=colors, line=dict(color=CFG_COLORS['border'], width=1)),
         hovertemplate='<b>%{label}</b><br>Avg Performance: %{value:.2f}<extra></extra>',
         textinfo='label+percent',
         textfont=dict(color=CFG_COLORS['text'])

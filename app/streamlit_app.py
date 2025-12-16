@@ -711,22 +711,23 @@ def plot_position_coverage(df: pd.DataFrame):
     position_stats.columns = ['Position', 'UniquePlayers']
     position_stats = position_stats.sort_values('UniquePlayers', ascending=False)
     
-    # Use neutral colors for coverage (not performance-based)
-    # Use a gradient from light to dark blue for coverage visualization
+    # Use same color palette as performance charts (Low/Medium/High/Elite)
+    # Map count values to same color scale for consistency
     max_players = position_stats['UniquePlayers'].max()
     min_players = position_stats['UniquePlayers'].min()
     range_players = max_players - min_players if max_players > min_players else 1
     colors = []
     for val in position_stats['UniquePlayers']:
-        # Normalize to 0-1 and map to light blue -> dark blue gradient
-        normalized = (val - min_players) / range_players
-        # Use light gray to dark blue gradient (not performance colors)
-        if normalized < 0.33:
-            colors.append('#E3F2FD')  # Very light blue
-        elif normalized < 0.66:
-            colors.append('#90CAF9')  # Medium blue
+        # Normalize to 0-1 and map to same color scale as performance
+        normalized = (val - min_players) / range_players if range_players > 0 else 0
+        if normalized < 0.25:
+            colors.append(CFG_COLORS['danger'])  # Low - Red
+        elif normalized < 0.5:
+            colors.append(CFG_COLORS['warning'])  # Medium - Orange
+        elif normalized < 0.75:
+            colors.append(CFG_COLORS['success'])  # High - Teal
         else:
-            colors.append('#42A5F5')  # Darker blue
+            colors.append(CFG_COLORS['primary'])  # Elite - Blue
     
     fig = go.Figure()
     
@@ -878,22 +879,23 @@ def plot_age_band_coverage(df: pd.DataFrame):
     age_stats['AgeBand'] = pd.Categorical(age_stats['AgeBand'], categories=age_order, ordered=True)
     age_stats = age_stats.sort_values('AgeBand')
     
-    # Use neutral colors for coverage (not performance-based)
-    # Use a gradient from light to dark blue for coverage visualization
+    # Use same color palette as performance charts (Low/Medium/High/Elite)
+    # Map count values to same color scale for consistency
     max_players = age_stats['PlayerID'].max()
     min_players = age_stats['PlayerID'].min()
     range_players = max_players - min_players if max_players > min_players else 1
     colors = []
     for val in age_stats['PlayerID']:
-        # Normalize to 0-1 and map to light blue -> dark blue gradient
-        normalized = (val - min_players) / range_players
-        # Use light gray to dark blue gradient (not performance colors)
-        if normalized < 0.33:
-            colors.append('#E3F2FD')  # Very light blue
-        elif normalized < 0.66:
-            colors.append('#90CAF9')  # Medium blue
+        # Normalize to 0-1 and map to same color scale as performance
+        normalized = (val - min_players) / range_players if range_players > 0 else 0
+        if normalized < 0.25:
+            colors.append(CFG_COLORS['danger'])  # Low - Red
+        elif normalized < 0.5:
+            colors.append(CFG_COLORS['warning'])  # Medium - Orange
+        elif normalized < 0.75:
+            colors.append(CFG_COLORS['success'])  # High - Teal
         else:
-            colors.append('#42A5F5')  # Darker blue
+            colors.append(CFG_COLORS['primary'])  # Elite - Blue
     
     fig = go.Figure()
     fig.add_trace(go.Bar(

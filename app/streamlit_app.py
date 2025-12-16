@@ -211,7 +211,7 @@ def load_data():
 # HELPER FUNCTIONS
 # ===========================================
 def get_performance_color(value: float, min_val: float = 1.0, max_val: float = 5.0) -> str:
-    """Get color from CFG palette based on performance value."""
+    """Get color from CFG palette based on performance value - consistent mapping."""
     if pd.isna(value):
         return CFG_COLORS['light_gray']
     
@@ -219,21 +219,16 @@ def get_performance_color(value: float, min_val: float = 1.0, max_val: float = 5
     normalized = (value - min_val) / (max_val - min_val)
     normalized = max(0, min(1, normalized))  # Clamp between 0 and 1
     
-    # Map to CFG colors: low (danger) -> medium (warning) -> high (success/primary)
-    if normalized < 0.33:
-        # Low performance - red to gold gradient
-        ratio = normalized / 0.33
-        return CFG_COLORS['danger']
-    elif normalized < 0.66:
-        # Medium performance - gold
-        return CFG_COLORS['warning']
+    # Consistent color mapping: Low (red) < 2.5, Medium (orange) 2.5-3.5, High (teal) 3.5-4.5, Elite (blue) > 4.5
+    # Using normalized: < 0.375 (Low), 0.375-0.625 (Medium), 0.625-0.875 (High), > 0.875 (Elite)
+    if normalized < 0.375:
+        return CFG_COLORS['danger']  # Low - Red
+    elif normalized < 0.625:
+        return CFG_COLORS['warning']  # Medium - Orange
+    elif normalized < 0.875:
+        return CFG_COLORS['success']  # High - Teal
     else:
-        # High performance - teal to blue gradient
-        ratio = (normalized - 0.66) / 0.34
-        if ratio < 0.5:
-            return CFG_COLORS['success']
-        else:
-            return CFG_COLORS['primary']
+        return CFG_COLORS['primary']  # Elite - Blue
 
 def render_performance_color_legend():
     """Render legend explaining performance color coding for bar charts."""
@@ -519,7 +514,7 @@ def plot_performance_distribution(df: pd.DataFrame):
         paper_bgcolor='white',
         font=dict(color=CFG_COLORS['text'], size=12),
         height=450,
-        margin=dict(l=50, r=30, t=60, b=40)
+        margin=dict(l=50, r=30, t=80, b=40)
     )
     
     return fig
@@ -575,7 +570,7 @@ def plot_country_performance(df: pd.DataFrame, top_n: int = 15):
         paper_bgcolor='white',
         font=dict(color=CFG_COLORS['text'], size=12),
         height=450,
-        margin=dict(l=50, r=30, t=60, b=40),
+        margin=dict(l=50, r=30, t=80, b=40),
         showlegend=False
     )
     
@@ -603,16 +598,23 @@ def plot_country_potential(df: pd.DataFrame, top_n: int = 15, potential_filter: 
     country_stats.columns = ['Country', 'UniquePlayers', 'PotentialPct']
     country_stats = country_stats[country_stats['UniquePlayers'] >= 5].sort_values('PotentialPct', ascending=False).head(top_n)
     
-    # Color based on value (high/medium/low)
-    avg_pct = country_stats['PotentialPct'].mean()
+    # Use same color mapping as performance (Low, Medium, High, Elite)
+    # Map percentage to performance-like scale: 0-5% (Low), 5-10% (Medium), 10-15% (High), >15% (Elite)
+    max_pct = country_stats['PotentialPct'].max() if len(country_stats) > 0 else 20
     colors = []
     for val in country_stats['PotentialPct']:
-        if val >= avg_pct * 1.5:
-            colors.append(CFG_COLORS['success'])  # High - teal
-        elif val >= avg_pct * 0.5:
-            colors.append(CFG_COLORS['primary'])   # Medium - blue
+        if max_pct > 0:
+            normalized = val / max_pct
+            if normalized < 0.25:
+                colors.append(CFG_COLORS['danger'])  # Low - Red
+            elif normalized < 0.5:
+                colors.append(CFG_COLORS['warning'])  # Medium - Orange
+            elif normalized < 0.75:
+                colors.append(CFG_COLORS['success'])  # High - Teal
+            else:
+                colors.append(CFG_COLORS['primary'])  # Elite - Blue
         else:
-            colors.append(CFG_COLORS['warning'])   # Low - orange
+            colors.append(CFG_COLORS['light_gray'])
     
     fig = go.Figure()
     
@@ -651,7 +653,7 @@ def plot_country_potential(df: pd.DataFrame, top_n: int = 15, potential_filter: 
         paper_bgcolor='white',
         font=dict(color=CFG_COLORS['text'], size=12),
         height=450,
-        margin=dict(l=50, r=30, t=60, b=40),
+        margin=dict(l=50, r=30, t=80, b=40),
         showlegend=False
     )
     
@@ -701,7 +703,7 @@ def plot_position_performance(df: pd.DataFrame):
         paper_bgcolor='white',
         font=dict(color=CFG_COLORS['text'], size=12),
         height=450,
-        margin=dict(l=50, r=30, t=60, b=40),
+        margin=dict(l=50, r=30, t=80, b=40),
         showlegend=False
     )
     
@@ -751,7 +753,7 @@ def plot_position_coverage(df: pd.DataFrame):
         paper_bgcolor='white',
         font=dict(color=CFG_COLORS['text'], size=12),
         height=450,
-        margin=dict(l=50, r=30, t=60, b=40),
+        margin=dict(l=50, r=30, t=80, b=40),
         showlegend=False
     )
     
@@ -800,7 +802,7 @@ def plot_age_band_performance(df: pd.DataFrame):
         paper_bgcolor='white',
         font=dict(color=CFG_COLORS['text'], size=12),
         height=450,
-        margin=dict(l=50, r=30, t=60, b=40),
+        margin=dict(l=50, r=30, t=80, b=40),
         showlegend=False
     )
     
@@ -862,7 +864,7 @@ def plot_age_band_potential(df: pd.DataFrame, potential_filter: str = 'A'):
         paper_bgcolor='white',
         font=dict(color=CFG_COLORS['text'], size=12),
         height=450,
-        margin=dict(l=50, r=30, t=60, b=40),
+        margin=dict(l=50, r=30, t=80, b=40),
         showlegend=False
     )
     
@@ -911,7 +913,7 @@ def plot_age_band_coverage(df: pd.DataFrame):
         paper_bgcolor='white',
         font=dict(color=CFG_COLORS['text'], size=12),
         height=450,
-        margin=dict(l=50, r=30, t=60, b=40),
+        margin=dict(l=50, r=30, t=80, b=40),
         showlegend=False
     )
     
@@ -1196,7 +1198,7 @@ def plot_scatter_performance_vs_potential(df: pd.DataFrame):
         paper_bgcolor='white',
         font=dict(color=CFG_COLORS['text'], size=12),
         height=450,
-        margin=dict(l=50, r=30, t=60, b=40),
+        margin=dict(l=50, r=30, t=80, b=40),
         legend=dict(
             title=dict(text="Age Band", font=dict(color=CFG_COLORS['text'], size=11)),
             font=dict(color=CFG_COLORS['text'], size=10)
@@ -2190,15 +2192,17 @@ def dashboard_page():
         font-size: 1rem !important;
         font-weight: 700 !important;
         padding: 0.75rem 1rem !important;
-        border: 1px solid {CFG_COLORS['secondary']} !important;
-        border-bottom: 2px solid {CFG_COLORS['secondary']} !important;
+        border: 1px solid {CFG_COLORS['primary']} !important;
+        border-bottom: 2px solid {CFG_COLORS['primary']} !important;
         border-radius: 8px 8px 0 0 !important;
-        background: #F5FAFF !important;
-        color: {CFG_COLORS['text_secondary']} !important;
+        background: rgba(92, 171, 232, 0.15) !important;
+        color: {CFG_COLORS['primary']} !important;
         transition: all 0.2s !important;
+        height: 48px !important;
+        vertical-align: middle !important;
     }}
     button[key*="tab_btn_"]:hover {{
-        background: #E0F2FE !important;
+        background: rgba(92, 171, 232, 0.25) !important;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -2215,8 +2219,8 @@ def dashboard_page():
                     st.markdown(f"""
                     <style>
                     button[key="tab_btn_{tab_info['id']}"] {{
-                        background: white !important;
-                        color: {CFG_COLORS['primary']} !important;
+                        background: {CFG_COLORS['primary']} !important;
+                        color: white !important;
                         border-bottom: 2px solid white !important;
                         margin-bottom: -2px !important;
                         z-index: 1 !important;
@@ -2396,6 +2400,7 @@ def dashboard_page():
         with col1:
             st.markdown("#### **PERFORMANCE DISTRIBUTION**")
             st.caption("Distribution of performance grades")
+            render_performance_color_legend()
             fig_dist = plot_performance_distribution(df_filtered)
             st.plotly_chart(fig_dist, use_container_width=True)
             st.markdown("""
@@ -2413,6 +2418,7 @@ def dashboard_page():
         with col2:
             st.markdown("#### **PERFORMANCE BY AGE BAND**")
             st.caption("Average performance by age groups")
+            render_performance_color_legend()
             fig_age_perf = plot_age_band_performance(df_filtered)
             st.plotly_chart(fig_age_perf, use_container_width=True)
             st.markdown("""
@@ -2430,8 +2436,9 @@ def dashboard_page():
         with col3:
             st.markdown("#### **POTENTIAL BY AGE BAND**")
             st.caption("% players with selected potential")
-            pot_grades_chart = ['All', 'A', 'B', 'C', 'D', 'E', 'F']
-            selected_pot_chart = st.selectbox("**Potential**", pot_grades_chart, key='pot_filter_chart', index=1, label_visibility="collapsed")
+            render_performance_color_legend()
+            pot_grades_chart = ['A', 'B', 'C', 'D', 'E', 'F']
+            selected_pot_chart = st.selectbox("**Potential Grade**", pot_grades_chart, key='pot_filter_chart', index=0)
             fig_age_pot = plot_age_band_potential(df_filtered, selected_pot_chart)
             st.plotly_chart(fig_age_pot, use_container_width=True)
             st.markdown(f"""
@@ -2500,9 +2507,9 @@ def dashboard_page():
         with col_geo1:
             st.markdown("### **AVERAGE PERFORMANCE BY COUNTRY**")
             st.caption("Comparative analysis of performance by country")
+            render_performance_color_legend()
             fig_country_perf = plot_country_performance(df_filtered, top_n_geo)
             st.plotly_chart(fig_country_perf, use_container_width=True)
-            render_performance_color_legend()
             st.markdown("""
             <div style='font-size: 0.85rem; color: #6B7280; padding: 0.5rem; background-color: #F3F4F6; border-radius: 5px; margin-top: 0.5rem;'>
             <strong>Strategic Insight:</strong> Geographic performance analysis identifies the world's premium talent markets where our scouting 
@@ -2522,8 +2529,9 @@ def dashboard_page():
         with col_geo2:
             st.markdown("### **% PLAYERS WITH POTENTIAL BY COUNTRY**")
             st.caption("% players with selected potential grade by country")
+            render_performance_color_legend()
             pot_grades_geo = ['A', 'B', 'C', 'D', 'E', 'F']
-            selected_pot_geo = st.selectbox("**Potential Grade**", pot_grades_geo, key='pot_filter_geo', index=0, label_visibility="collapsed")
+            selected_pot_geo = st.selectbox("**Potential Grade**", pot_grades_geo, key='pot_filter_geo', index=0)
             fig_country_pot = plot_country_potential(df_filtered, top_n_geo, selected_pot_geo)
             st.plotly_chart(fig_country_pot, use_container_width=True)
             st.markdown(f"""
@@ -2551,8 +2559,8 @@ def dashboard_page():
         with col_team1:
             st.markdown("### **TEAM PERFORMANCE ANALYSIS**")
             st.caption("Average performance by current team")
-            plot_team_performance_simple(df_filtered, top_n_geo)
             render_performance_color_legend()
+            plot_team_performance_simple(df_filtered, top_n_geo)
         
         with col_team2:
             st.markdown("### **POTENTIAL DISTRIBUTION BY TEAM**")

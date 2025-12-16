@@ -265,7 +265,6 @@ def navigate_to_tab(tab_id: str):
     st.session_state['current_page'] = 'dashboard'
     st.session_state['selected_tab'] = tab_id
     st.query_params.update(page='dashboard', tab=tab_id)
-    st.experimental_set_query_params(page='dashboard', tab=tab_id)
     st.rerun()
 
 
@@ -2178,7 +2177,6 @@ def dashboard_page():
         if st.button("Home", key="home_tab_button"):
             st.session_state['current_page'] = 'home'
             st.query_params.clear()
-            st.experimental_set_query_params()
             st.rerun()
     
     tab1, tab2, tab3, tab4 = st.tabs([

@@ -2171,115 +2171,75 @@ def dashboard_page():
     
     selected_tab_id = st.session_state['selected_tab']
     
-    # Create 4 main tabs with a top-right Home button for quick navigation
-    tab_cols = st.columns([5, 1])
+    # Custom tab navigation using buttons (more reliable than Streamlit tabs + JS)
+    tab_info_list = [
+        {'id': 'player_analysis', 'label': 'Player Analysis'},
+        {'id': 'performance_distribution', 'label': 'Performance & Distribution'},
+        {'id': 'geographic_teams', 'label': 'Geographic & Teams'},
+        {'id': 'position_scouts', 'label': 'Position & Scouts'}
+    ]
+    
+    # Create custom tab buttons styled like Streamlit tabs
+    st.markdown(f"""
+    <style>
+    /* Style Streamlit buttons to look like tabs */
+    div[data-testid="column"]:has(button[key*="tab_btn_"]) {{
+        padding: 0 !important;
+    }}
+    button[key*="tab_btn_"] {{
+        font-size: 1rem !important;
+        font-weight: 700 !important;
+        padding: 0.75rem 1rem !important;
+        border: 1px solid {CFG_COLORS['secondary']} !important;
+        border-bottom: 2px solid {CFG_COLORS['secondary']} !important;
+        border-radius: 8px 8px 0 0 !important;
+        background: #F5FAFF !important;
+        color: {CFG_COLORS['text_secondary']} !important;
+        transition: all 0.2s !important;
+    }}
+    button[key*="tab_btn_"]:hover {{
+        background: #E0F2FE !important;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Tab buttons row with Home button
+    tab_cols = st.columns([4, 1])
+    with tab_cols[0]:
+        tab_buttons = st.columns(4)
+        for idx, tab_info in enumerate(tab_info_list):
+            with tab_buttons[idx]:
+                is_active = selected_tab_id == tab_info['id']
+                # Use different styling for active tab
+                if is_active:
+                    st.markdown(f"""
+                    <style>
+                    button[key="tab_btn_{tab_info['id']}"] {{
+                        background: white !important;
+                        color: {CFG_COLORS['primary']} !important;
+                        border-bottom: 2px solid white !important;
+                        margin-bottom: -2px !important;
+                        z-index: 1 !important;
+                    }}
+                    </style>
+                    """, unsafe_allow_html=True)
+                if st.button(tab_info['label'], key=f"tab_btn_{tab_info['id']}", use_container_width=True):
+                    st.session_state['selected_tab'] = tab_info['id']
+                    st.query_params.update(page='dashboard', tab=tab_info['id'])
+                    st.rerun()
+    
     with tab_cols[1]:
         if st.button("Home", key="home_tab_button"):
             st.session_state['current_page'] = 'home'
             st.query_params.clear()
             st.rerun()
     
-    # Create tabs - but we'll control content via session_state
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "Player Analysis",
-        "Performance & Distribution",
-        "Geographic & Teams",
-        "Position & Scouts"
-    ])
-    
-    # Map tab IDs to actual tab objects
-    tab_mapping = {
-        'player_analysis': tab1,
-        'performance_distribution': tab2,
-        'geographic_teams': tab3,
-        'position_scouts': tab4
-    }
-    
-    # JavaScript to visually select the correct tab - more aggressive approach
-    tab_index_mapping = {
-        'player_analysis': 0,
-        'performance_distribution': 1,
-        'geographic_teams': 2,
-        'position_scouts': 3
-    }
-    target_index = tab_index_mapping.get(selected_tab_id, 0)
-    tab_labels = ["Player Analysis", "Performance & Distribution", "Geographic & Teams", "Position & Scouts"]
-    target_label = tab_labels[target_index]
-    
-    # JavaScript to visually select the correct tab - very aggressive with multiple strategies
-    st.markdown(f"""
-    <script>
-        (function() {{
-            const targetIndex = {target_index};
-            const targetLabel = "{target_label}";
-            let clicked = false;
-            
-            function forceClickTab() {{
-                if (clicked) return true;
-                
-                // Strategy 1: Find by index
-                const allTabs = Array.from(document.querySelectorAll('button[role="tab"], [data-baseweb="tab"], .stTabs button'));
-                if (allTabs.length > targetIndex) {{
-                    const tab = allTabs[targetIndex];
-                    if (tab && tab.getAttribute('aria-selected') !== 'true') {{
-                        tab.scrollIntoView({{ behavior: 'smooth', block: 'center' }});
-                        setTimeout(() => {{
-                            tab.click();
-                            clicked = true;
-                        }}, 100);
-                        return true;
-                    }}
-                }}
-                
-                // Strategy 2: Find by label text
-                for (let tab of allTabs) {{
-                    const text = (tab.innerText || tab.textContent || '').trim();
-                    if (text.includes(targetLabel.split(' ')[0]) || text.includes(targetLabel.split('&')[0].trim())) {{
-                        if (tab.getAttribute('aria-selected') !== 'true') {{
-                            tab.scrollIntoView({{ behavior: 'smooth', block: 'center' }});
-                            setTimeout(() => {{
-                                tab.click();
-                                clicked = true;
-                            }}, 100);
-                            return true;
-                        }}
-                    }}
-                }}
-                
-                return false;
-            }}
-            
-            // Multiple attempts with different timings
-            forceClickTab();
-            setTimeout(forceClickTab, 200);
-            setTimeout(forceClickTab, 500);
-            setTimeout(forceClickTab, 1000);
-            
-            // Observer for DOM changes
-            const observer = new MutationObserver(() => {{
-                if (!clicked) {{
-                    forceClickTab();
-                }}
-            }});
-            observer.observe(document.body, {{ childList: true, subtree: true }});
-            setTimeout(() => observer.disconnect(), 4000);
-            
-            // Interval as final fallback
-            let attempts = 0;
-            const interval = setInterval(() => {{
-                attempts++;
-                if (forceClickTab() || attempts > 40) {{
-                    clearInterval(interval);
-                }}
-            }}, 100);
-        }})();
-    </script>
-    """, unsafe_allow_html=True)
+    # Render content based on selected_tab_id (no Streamlit tabs, just conditional rendering)
     
     # ===========================================
     # TAB 1: PLAYER ANALYSIS
     # ===========================================
-    with tab1:
+    if selected_tab_id == 'player_analysis':
         # Filters row
         col_filter1, col_filter2, col_filter3 = st.columns([2, 1, 1])
         with col_filter1:
@@ -2429,7 +2389,7 @@ def dashboard_page():
     # ===========================================
     # TAB 2: PERFORMANCE & DISTRIBUTION
     # ===========================================
-    with tab2:
+    elif selected_tab_id == 'performance_distribution':
         # Row 1: 3 most important charts (3 columns)
         col1, col2, col3 = st.columns(3)
         
@@ -2526,7 +2486,7 @@ def dashboard_page():
     # ===========================================
     # TAB 3: GEOGRAPHIC & TEAMS
     # ===========================================
-    with tab3:
+    elif selected_tab_id == 'geographic_teams':
         # Top N filter
         col_filter_top, col_filter_empty = st.columns([1, 4])
         with col_filter_top:
@@ -2629,7 +2589,7 @@ def dashboard_page():
     # ===========================================
     # TAB 4: POSITION & SCOUTS
     # ===========================================
-    with tab4:
+    elif selected_tab_id == 'position_scouts':
         # Row 1: Position Analysis (2 columns)
         col_pos1, col_pos2 = st.columns(2)
         

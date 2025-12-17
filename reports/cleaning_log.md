@@ -1,6 +1,6 @@
 # Data Cleaning Log
 
-Generated: 2025-12-15 12:51:27
+Generated: 2025-12-16 16:35:16
 
 ## Overview
 
@@ -23,18 +23,18 @@ The pipeline processed two main datasets: Players and ReportingInsight.
 
 ### After Cleaning
 
-- **Total Rows**: 433
+- **Total Rows**: 432
 - **Exact Duplicates**: 0
-- **Duplicate PlayerIDs**: 1
+- **Duplicate PlayerIDs**: 0
 - **Missing PlayerName**: 0
 - **Missing DateOfBirth**: 6
 - **Missing Nationality**: 6
 
 ### Improvements
 
-- **Duplicates Removed**: 22
-- **PlayerID Mappings Created**: 16
-- **Data Quality Improvement**: 4.8% reduction in rows
+- **Duplicates Removed**: 23
+- **PlayerID Mappings Created**: 24
+- **Data Quality Improvement**: 5.1% reduction in rows
 
 ### Missing Values (After Cleaning)
 
@@ -64,9 +64,9 @@ The pipeline processed two main datasets: Players and ReportingInsight.
 
 ### ID Mapping Statistics
 
-- **ID Mappings Applied**: 8
-- **Unique Old IDs Found**: 7
-- **Rows with Mapped IDs**: 30
+- **ID Mappings Applied**: 34
+- **Unique Old IDs Found**: 10
+- **Rows with Mapped IDs**: 60
 
 ### Referential Integrity
 
@@ -105,9 +105,9 @@ The pipeline processed two main datasets: Players and ReportingInsight.
 
 The data cleaning pipeline successfully:
 
-1. ✅ Removed 22 duplicate player records
-2. ✅ Created 16 PlayerID mappings for referential integrity
-3. ✅ Applied 8 ID mappings to reporting data
+1. ✅ Removed 23 duplicate player records
+2. ✅ Created 24 PlayerID mappings for referential integrity
+3. ✅ Applied 34 ID mappings to reporting data
 4. ✅ Validated referential integrity between Players and Reporting tables
 5. ✅ Normalized and standardized all data fields
 

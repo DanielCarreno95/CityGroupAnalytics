@@ -1,211 +1,257 @@
 """
-Utility functions for data cleaning and processing pipeline.
+Utility functions for data cleaning and normalization.
 
-This module contains helper functions used across the data cleaning pipeline
-for player data audit, normalization, and transformation.
+This module provides reusable functions for:
+- Name and nationality normalization
+- Player fingerprinting for duplicate detection
+- Date parsing and validation
+- PlayerID validation
+- Canonical ID selection
 """
 
 import pandas as pd
 import numpy as np
-from datetime import datetime
-from typing import Dict, Tuple, Optional
 import re
-
-
-def calculate_age_from_dob(date_of_birth: str, reference_date: Optional[str] = None) -> Optional[int]:
-    """
-    Calculate age from date of birth string.
-    
-    Args:
-        date_of_birth: Date string in format DD/MM/YYYY
-        reference_date: Reference date for age calculation (default: today)
-    
-    Returns:
-        Age in years or None if date is invalid
-    """
-    if pd.isna(date_of_birth) or date_of_birth == '':
-        return None
-    
-    try:
-        # Parse date
-        dob = datetime.strptime(date_of_birth, '%d/%m/%Y')
-        ref = datetime.strptime(reference_date, '%d/%m/%Y') if reference_date else datetime.now()
-        
-        # Calculate age
-        age = ref.year - dob.year - ((ref.month, ref.day) < (dob.month, dob.day))
-        return age if age >= 0 else None
-    except (ValueError, TypeError):
-        return None
+from typing import Optional
+from datetime import datetime
 
 
 def normalize_name(name: str) -> str:
     """
-    Normalize player name for comparison (remove extra spaces, titles, etc.).
+    Normalize player name by removing titles, suffixes, and extra whitespace.
+    
+    Handles:
+    - Titles: Dr., Mr., Mrs., Ms., etc.
+    - Suffixes: DVM, Jr., Sr., II, III, etc.
+    - Extra whitespace
+    - Case normalization
     
     Args:
-        name: Raw player name
-    
+        name: Raw player name string
+        
     Returns:
-        Normalized name string
+        Normalized name string, or empty string if invalid
     """
     if pd.isna(name) or name == '':
         return ''
     
+    # Convert to string and strip whitespace
+    name_str = str(name).strip()
+    
+    # If only whitespace, return empty
+    if name_str == '' or name_str.isspace():
+        return ''
+    
     # Remove common titles
-    name = re.sub(r'^(Dr\.|Mr\.|Mrs\.|Ms\.|Miss)\s+', '', str(name), flags=re.IGNORECASE)
-    name = re.sub(r'\s+(DVM|MD|Jr\.|Sr\.|III|II|IV)$', '', str(name), flags=re.IGNORECASE)
+    titles = ['Dr.', 'Mr.', 'Mrs.', 'Ms.', 'Miss', 'Prof.', 'Professor']
+    for title in titles:
+        # Remove title at the beginning
+        name_str = re.sub(rf'^{re.escape(title)}\s+', '', name_str, flags=re.IGNORECASE)
     
-    # Normalize whitespace
-    name = ' '.join(name.split())
+    # Remove common suffixes
+    suffixes = ['DVM', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'MD', 'PhD']
+    for suffix in suffixes:
+        # Remove suffix at the end
+        name_str = re.sub(rf'\s+{re.escape(suffix)}$', '', name_str, flags=re.IGNORECASE)
     
-    # Remove leading/trailing whitespace
-    return name.strip()
+    # Normalize whitespace (multiple spaces to single space)
+    name_str = ' '.join(name_str.split())
+    
+    # Title case (first letter of each word capitalized)
+    name_str = name_str.title()
+    
+    return name_str.strip()
 
 
 def normalize_nationality(nationality: str) -> str:
     """
-    Normalize nationality strings (handle variations, extra spaces).
+    Normalize nationality strings for consistent matching.
+    
+    Handles:
+    - Common variations (e.g., "Congo DR" -> "DR Congo", "Côte d'Ivoire" -> "Ivory Coast")
+    - Extra whitespace
+    - Case normalization
     
     Args:
         nationality: Raw nationality string
-    
+        
     Returns:
-        Normalized nationality string
+        Normalized nationality string, or empty string if invalid
     """
     if pd.isna(nationality) or nationality == '':
         return ''
     
-    nationality = str(nationality).strip()
+    # Convert to string and strip whitespace
+    nat_str = str(nationality).strip()
     
-    # Handle common variations
-    nationality_map = {
+    # If only whitespace, return empty
+    if nat_str == '' or nat_str.isspace():
+        return ''
+    
+    # Common nationality mappings
+    nationality_mappings = {
         'Congo DR': 'DR Congo',
-        'Côte d\'Ivoire': 'Ivory Coast',
-        'Czech Republic': 'Czechia',
+        'DR Congo': 'DR Congo',
+        'Congo': 'DR Congo',
+        "Côte d'Ivoire": 'Ivory Coast',
+        'Ivory Coast': 'Ivory Coast',
         'SWEDEN': 'Sweden',
-        'Belgium ': 'Belgium'
+        'sweden': 'Sweden',
+        'Belgium ': 'Belgium',
+        'Belgium': 'Belgium',
     }
     
-    return nationality_map.get(nationality, nationality)
+    # Check if we have a mapping
+    if nat_str in nationality_mappings:
+        return nationality_mappings[nat_str]
+    
+    # Normalize whitespace
+    nat_str = ' '.join(nat_str.split())
+    
+    # Title case
+    nat_str = nat_str.title()
+    
+    return nat_str.strip()
 
 
-def create_player_fingerprint(row: pd.Series) -> str:
+def parse_date_safe(date_str: str, date_format: Optional[str] = None) -> Optional[datetime]:
     """
-    Create a fingerprint for player identification based on key attributes.
-    
-    Args:
-        row: DataFrame row with player information
-    
-    Returns:
-        Fingerprint string for duplicate detection
-    """
-    name = normalize_name(row.get('PlayerName', ''))
-    dob = str(row.get('DateOfBirth', ''))
-    nationality = normalize_nationality(row.get('PlayerFirstNationality', ''))
-    
-    # Create fingerprint (name + dob + nationality)
-    fingerprint = f"{name}|{dob}|{nationality}".lower()
-    return fingerprint
-
-
-def determine_canonical_player_id(duplicate_group: pd.DataFrame) -> str:
-    """
-    Determine which PlayerID should be kept as canonical for a group of duplicates.
-    
-    Selection criteria (in order):
-    1. ID with most complete data (fewest nulls)
-    2. ID with CurrentTeam filled
-    3. ID that appears first in ReportingInsight (if available)
-    4. Alphabetically first ID
-    
-    Args:
-        duplicate_group: DataFrame with duplicate players
-    
-    Returns:
-        Canonical PlayerID to keep
-    """
-    # Score each row based on data completeness
-    scores = []
-    for idx, row in duplicate_group.iterrows():
-        score = 0
-        # Prefer rows with CurrentTeam
-        if pd.notna(row.get('CurrentTeam')) and str(row.get('CurrentTeam')).strip() != '':
-            score += 10
-        # Prefer rows with DateOfBirth
-        if pd.notna(row.get('DateOfBirth')) and str(row.get('DateOfBirth')).strip() != '':
-            score += 5
-        # Prefer rows with PlayerName (should always be present, but check)
-        if pd.notna(row.get('PlayerName')) and str(row.get('PlayerName')).strip() != '':
-            score += 3
-        scores.append((score, idx))
-    
-    # Sort by score (descending), then by PlayerID (ascending)
-    scores.sort(key=lambda x: (-x[0], duplicate_group.loc[x[1], 'PlayerID']))
-    
-    return duplicate_group.loc[scores[0][1], 'PlayerID']
-
-
-def parse_date_safe(date_str: str, format_str: str = '%d/%m/%Y') -> Optional[datetime]:
-    """
-    Safely parse date string.
+    Safely parse date string with multiple format attempts.
     
     Args:
         date_str: Date string to parse
-        format_str: Expected date format
-    
+        date_format: Optional specific format to try first
+        
     Returns:
-        Parsed datetime object or None
+        datetime object if successful, None otherwise
     """
-    if pd.isna(date_str) or date_str == '':
+    if pd.isna(date_str) or date_str == '' or str(date_str).strip() == '':
         return None
     
-    try:
-        return datetime.strptime(str(date_str).strip(), format_str)
-    except (ValueError, TypeError):
-        return None
-
-
-def get_age_band_from_age(age: Optional[int]) -> str:
-    """
-    Convert numeric age to age band category.
+    date_str = str(date_str).strip()
     
-    Args:
-        age: Age in years
+    # List of formats to try
+    formats = []
+    if date_format:
+        formats.append(date_format)
     
-    Returns:
-        Age band string (U18, U21, 21-24, 25-29, 30-34, 35+)
-    """
-    if age is None:
-        return 'Unknown'
+    formats.extend([
+        '%d/%m/%Y',
+        '%Y-%m-%d',
+        '%d-%m-%Y',
+        '%m/%d/%Y',
+        '%Y/%m/%d',
+        '%d/%m/%Y %H:%M',
+        '%Y-%m-%d %H:%M:%S',
+        '%d-%m-%Y %H:%M',
+    ])
     
-    if age < 18:
-        return 'U18'
-    elif age < 21:
-        return 'U21'
-    elif age < 25:
-        return '21-24'
-    elif age < 30:
-        return '25-29'
-    elif age < 35:
-        return '30-34'
-    else:
-        return '35+'
+    for fmt in formats:
+        try:
+            return datetime.strptime(date_str, fmt)
+        except (ValueError, TypeError):
+            continue
+    
+    return None
 
 
 def validate_player_id(player_id: str) -> bool:
     """
     Validate PlayerID format.
     
+    Expected format: PLY_ followed by alphanumeric characters
+    
     Args:
         player_id: PlayerID string to validate
-    
+        
     Returns:
         True if valid format, False otherwise
     """
     if pd.isna(player_id) or player_id == '':
         return False
     
-    # Expected format: PLY_ followed by alphanumeric
+    player_id_str = str(player_id).strip()
+    
+    # Check format: PLY_ followed by alphanumeric
     pattern = r'^PLY_[A-Z0-9]+$'
-    return bool(re.match(pattern, str(player_id).strip()))
+    return bool(re.match(pattern, player_id_str))
+
+
+def create_player_fingerprint(row: pd.Series) -> str:
+    """
+    Create a unique fingerprint for a player based on normalized data.
+    
+    Fingerprint components:
+    - Normalized PlayerName
+    - DateOfBirth (normalized)
+    - Normalized PlayerFirstNationality
+    
+    This fingerprint is used to identify duplicate players (same person with different PlayerIDs).
+    
+    Args:
+        row: DataFrame row containing player data
+        
+    Returns:
+        Fingerprint string (hash-like identifier)
+    """
+    # Normalize name
+    name = normalize_name(row.get('PlayerName', ''))
+    
+    # Normalize date of birth
+    dob = row.get('DateOfBirth', '')
+    dob_parsed = parse_date_safe(dob)
+    dob_str = dob_parsed.strftime('%d/%m/%Y') if dob_parsed else ''
+    
+    # Normalize nationality
+    nationality = normalize_nationality(row.get('PlayerFirstNationality', ''))
+    
+    # Create fingerprint: name|dob|nationality
+    fingerprint = f"{name}|{dob_str}|{nationality}"
+    
+    return fingerprint.lower().strip()
+
+
+def determine_canonical_player_id(group: pd.DataFrame) -> str:
+    """
+    Determine the canonical (best) PlayerID from a group of duplicate players.
+    
+    Selection criteria (in order of priority):
+    1. Data completeness (fewest null/empty values)
+    2. CurrentTeam presence (prefers records with team information)
+    3. Alphabetical order (tiebreaker)
+    
+    Args:
+        group: DataFrame containing duplicate player records
+        
+    Returns:
+        Canonical PlayerID string
+    """
+    if len(group) == 0:
+        raise ValueError("Cannot determine canonical ID from empty group")
+    
+    if len(group) == 1:
+        return group['PlayerID'].iloc[0]
+    
+    # Calculate completeness score for each row
+    def calculate_completeness(row):
+        score = 0
+        # Count non-null, non-empty values
+        for col in ['PlayerName', 'PlayerFirstNationality', 'DateOfBirth', 'CurrentTeam']:
+            val = row.get(col, '')
+            if pd.notna(val) and str(val).strip() != '':
+                score += 1
+        return score
+    
+    group = group.copy()
+    group['completeness'] = group.apply(calculate_completeness, axis=1)
+    
+    # Sort by completeness (descending), then by CurrentTeam presence, then alphabetically
+    group = group.sort_values(
+        by=['completeness', 'CurrentTeam', 'PlayerID'],
+        ascending=[False, False, True],
+        na_position='last'
+    )
+    
+    # Return the PlayerID of the best record
+    return group['PlayerID'].iloc[0]
 
